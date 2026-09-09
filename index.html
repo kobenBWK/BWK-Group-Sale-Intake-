@@ -173,20 +173,6 @@ async function onSubmitInquiry(){
 }
 
 /* ---------------- REVIEW / SEND ---------------- */
-function buildInternalEmail(inq){
-  const lines = FIELDS.filter(f=>f.id!=="loggedBy").map(f=>{
-    const v = inq[f.id];
-    return `${fieldLabel(f.id)}: ${v ? v : "—"}`;
-  });
-  const subject = `New group inquiry — ${inq.org || inq.contactName || "unnamed lead"}`;
-  const body = `A new group inquiry was logged${inq.loggedBy ? " by " + inq.loggedBy : ""}.
-
-${lines.join("\n")}
-
-Logged: ${new Date(inq.timestamp).toLocaleString()}`;
-  return {subject, body};
-}
-
 function buildClientEmail(inq){
   const shareFields = ["activity","privacy","ageRange","location","groupSize","tripNature","staying","specialRequests","dates","flexibility"];
   const lines = shareFields.filter(id=>inq[id]).map(id=>`${fieldLabel(id)}: ${inq[id]}`);
@@ -206,41 +192,36 @@ Blue Waters Kayaking`;
 
 function renderReview(inq){
   const wrap = document.getElementById("form-wrap");
-  const internal = buildInternalEmail(inq);
   const hasClientEmail = !!inq.email;
   const client = buildClientEmail(inq);
 
-  let html = `<p class="form-intro">Inquiry saved. Review the emails below, edit anything, then send.</p>`;
-
-  html += `<div class="review-card" id="card-internal">
-    <h3>Internal summary</h3>
-    <div class="to-line">To: ${KOBEN_EMAIL}</div>
-    <input class="subject" id="internal-subject" value="${escapeAttr(internal.subject)}" readonly>
-    <textarea class="body" id="internal-body" readonly>${escapeHtml(internal.body)}</textarea>
-  </div>`;
+  let html = `<p class="form-intro">Inquiry saved${hasClientEmail ? " — review the email below, then send." : "."}</p>`;
 
   if(hasClientEmail){
     html += `<div class="review-card" id="card-client">
       <h3>Client confirmation</h3>
-      <div class="to-line">To: ${escapeHtml(inq.email)} — Cc: ${INFO_EMAIL}</div>
+      <div class="to-line">To: ${escapeHtml(inq.email)} — Cc: ${KOBEN_EMAIL}</div>
       <input class="subject" id="client-subject" value="${escapeAttr(client.subject)}" readonly>
       <textarea class="body" id="client-body" readonly>${escapeHtml(client.body)}</textarea>
     </div>`;
+    html += `<button class="btn btn-primary" id="send-btn">Send</button>
+      <button class="btn btn-secondary" id="edit-btn" style="margin-left:8px;">Edit answers</button>
+      <button class="btn btn-secondary" id="new-inquiry-btn" style="margin-left:8px;">Log another inquiry</button>
+      <div id="send-status"></div>`;
   } else {
-    html += `<div class="review-card"><h3>Client confirmation</h3>
-      <p style="font-size:13px;color:var(--muted);margin:0;">No client email was entered, so only the internal summary will be sent.</p>
+    html += `<div class="review-card"><h3>No email to send</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0;">No client email was entered, so there's nothing to send. This inquiry is already saved in the spreadsheet.</p>
     </div>`;
+    html += `<button class="btn btn-secondary" id="edit-btn">Edit answers</button>
+      <button class="btn btn-secondary" id="new-inquiry-btn" style="margin-left:8px;">Log another inquiry</button>`;
   }
-
-  html += `<button class="btn btn-primary" id="send-btn">Send</button>
-    <button class="btn btn-secondary" id="edit-btn" style="margin-left:8px;">Edit answers</button>
-    <button class="btn btn-secondary" id="new-inquiry-btn" style="margin-left:8px;">Log another inquiry</button>
-    <div id="send-status"></div>`;
 
   wrap.innerHTML = html;
   document.getElementById("edit-btn").addEventListener("click", ()=>renderForm(inq));
   document.getElementById("new-inquiry-btn").addEventListener("click", ()=>renderForm(null));
-  document.getElementById("send-btn").addEventListener("click", ()=>onSend(inq, hasClientEmail));
+  if(hasClientEmail){
+    document.getElementById("send-btn").addEventListener("click", ()=>onSend(inq));
+  }
 }
 
 function fallbackBox(e){
@@ -249,33 +230,27 @@ function fallbackBox(e){
   return `<div class="fallback-box">Send it yourself instead: <a href="${mailto}" target="_blank">open in your email client</a>.</div>`;
 }
 
-async function onSend(inq, hasClientEmail){
+async function onSend(inq){
   const btn = document.getElementById("send-btn");
   const statusEl = document.getElementById("send-status");
   btn.disabled = true;
   statusEl.innerHTML = `<p class="send-status">Sending…</p>`;
 
   const emailsToSend = [
-    {label:"internal", to: KOBEN_EMAIL, cc: "", subject: document.getElementById("internal-subject").value, body: document.getElementById("internal-body").value}
-  ];
-  if(hasClientEmail){
-    emailsToSend.push({
-      label:"client", to: inq.email, cc: INFO_EMAIL,
+    {label:"client", to: inq.email, cc: KOBEN_EMAIL,
       subject: document.getElementById("client-subject").value,
-      body: document.getElementById("client-body").value
-    });
-  }
+      body: document.getElementById("client-body").value}
+  ];
 
   try{
     const res = await callWebhookPost({secret: WEBHOOK_SECRET, action: "sendEmails", emails: emailsToSend});
     if(res.error) throw new Error(res.error);
     let html = "";
     (res.results||[]).forEach(r=>{
-      const label = r.label === "internal" ? "Internal summary" : "Client confirmation";
       if(r.sent){
-        html += `<p class="send-status ok">✓ ${label} sent.</p>`;
+        html += `<p class="send-status ok">✓ Email sent.</p>`;
       } else {
-        html += `<p class="send-status err">✗ ${label} did not send${r.error ? " — " + escapeHtml(r.error) : ""}.</p>`;
+        html += `<p class="send-status err">✗ Email did not send${r.error ? " — " + escapeHtml(r.error) : ""}.</p>`;
         html += fallbackBox(emailsToSend.find(e=>e.label===r.label));
       }
     });
