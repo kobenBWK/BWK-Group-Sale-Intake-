@@ -36,8 +36,9 @@
   .review-card{border:1px solid var(--line);border-radius:4px;background:var(--card);padding:18px 20px;margin-bottom:18px;}
   .review-card h3{font-family:'Fraunces', serif;font-weight:500;font-size:16.5px;margin:0 0 3px;color:var(--teal-dark);}
   .review-card .to-line{font-size:12.5px;color:var(--muted);margin-bottom:12px;font-family:monospace;}
-  .review-card input.subject{width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:14px;margin-bottom:8px;font-family:inherit;}
-  .review-card textarea.body{width:100%;min-height:150px;border:1px solid var(--line);border-radius:3px;padding:10px;font-size:13.5px;font-family:inherit;line-height:1.5;}
+  .review-card input.subject{width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:14px;margin-bottom:8px;font-family:inherit;background:var(--card);}
+  .review-card textarea.body{width:100%;min-height:150px;border:1px solid var(--line);border-radius:3px;padding:10px;font-size:13.5px;font-family:inherit;line-height:1.5;background:var(--card);}
+  .review-card input.subject[readonly], .review-card textarea.body[readonly]{background:var(--mist);color:#4A5B57;cursor:default;}
   .send-status{font-size:13px;margin-top:8px;}
   .send-status.ok{color:var(--good);}
   .send-status.err{color:var(--bad);}
@@ -214,16 +215,16 @@ function renderReview(inq){
   html += `<div class="review-card" id="card-internal">
     <h3>Internal summary</h3>
     <div class="to-line">To: ${KOBEN_EMAIL}</div>
-    <input class="subject" id="internal-subject" value="${escapeAttr(internal.subject)}">
-    <textarea class="body" id="internal-body">${escapeHtml(internal.body)}</textarea>
+    <input class="subject" id="internal-subject" value="${escapeAttr(internal.subject)}" readonly>
+    <textarea class="body" id="internal-body" readonly>${escapeHtml(internal.body)}</textarea>
   </div>`;
 
   if(hasClientEmail){
     html += `<div class="review-card" id="card-client">
       <h3>Client confirmation</h3>
       <div class="to-line">To: ${escapeHtml(inq.email)} — Cc: ${INFO_EMAIL}</div>
-      <input class="subject" id="client-subject" value="${escapeAttr(client.subject)}">
-      <textarea class="body" id="client-body">${escapeHtml(client.body)}</textarea>
+      <input class="subject" id="client-subject" value="${escapeAttr(client.subject)}" readonly>
+      <textarea class="body" id="client-body" readonly>${escapeHtml(client.body)}</textarea>
     </div>`;
   } else {
     html += `<div class="review-card"><h3>Client confirmation</h3>
