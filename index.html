@@ -99,13 +99,16 @@ async function callWebhookPost(payload){
 }
 
 /* ---------------- FORM ---------------- */
-function renderForm(){
+let editContext = null; // {id, timestamp} of a previously-saved inquiry being edited, or null for a brand-new one
+
+function renderForm(prefill){
+  editContext = prefill ? {id: prefill.id, timestamp: prefill.timestamp} : null;
   const wrap = document.getElementById("form-wrap");
   let html = "";
   if(!isConfigured()){
     html += `<div class="setup-warning">Setup isn't finished yet: this form can't save inquiries or send email until WEBHOOK_URL and WEBHOOK_SECRET are filled in at the top of the script, pointing at your deployed Apps Script Web App.</div>`;
   }
-  html += `<p class="form-intro">Fill in whatever the lead has shared — every field is optional. The italic line under each label is just a prompt for the kind of answer to jot down.</p>`;
+  html += `<p class="form-intro">${prefill ? "Editing this inquiry — fix whatever needs fixing, then save again." : "Fill in whatever the lead has shared — every field is optional. The italic line under each label is just a prompt for the kind of answer to jot down."}</p>`;
   FIELDS.forEach(f=>{
     let control;
     if(f.type === "select"){
@@ -125,6 +128,14 @@ function renderForm(){
   });
   html += `<button class="btn btn-primary" id="submit-inquiry-btn">Save inquiry &amp; prepare emails</button>`;
   wrap.innerHTML = html;
+
+  if(prefill){
+    FIELDS.forEach(f=>{
+      const el = document.getElementById("f-"+f.id);
+      if(el && prefill[f.id]) el.value = prefill[f.id];
+    });
+  }
+
   document.getElementById("submit-inquiry-btn").addEventListener("click", onSubmitInquiry);
 }
 
@@ -144,13 +155,14 @@ async function onSubmitInquiry(){
   btn.disabled = true; btn.textContent = "Saving…";
 
   const inquiry = {
-    id: "inq_" + Date.now() + "_" + Math.random().toString(36).slice(2,8),
-    timestamp: new Date().toISOString(),
+    id: editContext ? editContext.id : ("inq_" + Date.now() + "_" + Math.random().toString(36).slice(2,8)),
+    timestamp: editContext ? editContext.timestamp : new Date().toISOString(),
     ...data
   };
 
   try{
-    const res = await callWebhookPost({secret: WEBHOOK_SECRET, action: "saveInquiry", inquiry});
+    const action = editContext ? "updateInquiry" : "saveInquiry";
+    const res = await callWebhookPost({secret: WEBHOOK_SECRET, action, inquiry});
     if(res.error) throw new Error(res.error);
     renderReview(inquiry);
   }catch(e){
@@ -220,11 +232,13 @@ function renderReview(inq){
   }
 
   html += `<button class="btn btn-primary" id="send-btn">Send</button>
+    <button class="btn btn-secondary" id="edit-btn" style="margin-left:8px;">Edit answers</button>
     <button class="btn btn-secondary" id="new-inquiry-btn" style="margin-left:8px;">Log another inquiry</button>
     <div id="send-status"></div>`;
 
   wrap.innerHTML = html;
-  document.getElementById("new-inquiry-btn").addEventListener("click", renderForm);
+  document.getElementById("edit-btn").addEventListener("click", ()=>renderForm(inq));
+  document.getElementById("new-inquiry-btn").addEventListener("click", ()=>renderForm(null));
   document.getElementById("send-btn").addEventListener("click", ()=>onSend(inq, hasClientEmail));
 }
 
