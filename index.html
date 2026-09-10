@@ -36,9 +36,8 @@
   .review-card{border:1px solid var(--line);border-radius:4px;background:var(--card);padding:18px 20px;margin-bottom:18px;}
   .review-card h3{font-family:'Fraunces', serif;font-weight:500;font-size:16.5px;margin:0 0 3px;color:var(--teal-dark);}
   .review-card .to-line{font-size:12.5px;color:var(--muted);margin-bottom:12px;font-family:monospace;}
-  .review-card input.subject{width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:14px;margin-bottom:8px;font-family:inherit;background:var(--card);}
-  .review-card textarea.body{width:100%;min-height:150px;border:1px solid var(--line);border-radius:3px;padding:10px;font-size:13.5px;font-family:inherit;line-height:1.5;background:var(--card);}
-  .review-card input.subject[readonly], .review-card textarea.body[readonly]{background:var(--mist);color:#4A5B57;cursor:default;}
+  .review-card input.subject{width:100%;border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-size:14px;margin-bottom:8px;font-family:inherit;background:var(--mist);color:#4A5B57;cursor:default;}
+  .email-preview{border:1px solid var(--line);border-radius:3px;padding:14px 16px;background:#FAFEFD;font-size:13.5px;overflow-x:auto;}
   .send-status{font-size:13px;margin-top:8px;}
   .send-status.ok{color:var(--good);}
   .send-status.err{color:var(--bad);}
@@ -74,15 +73,17 @@ const FIELDS = [
   {id:"activity",   label:"Activity of interest",              example:"e.g., guided kayak tour, SUP rental, sunset paddle",  type:"input"},
   {id:"privacy",    label:"Private group or open to the public",example:"e.g., private group only, open to join a public tour", type:"input"},
   {id:"ageRange",   label:"Age range of participants",         example:"e.g., mostly adults 30–50, mixed ages 8–70",          type:"input"},
-  {id:"location",   label:"Location",                          example:"e.g., Heart's Desire Beach, Drake's Estero, etc.",    type:"input"},
   {id:"groupSize",  label:"Group size",                        example:"",                                                     type:"input"},
   {id:"budget",     label:"Budget",                            example:"",                                                     type:"input"},
   {id:"tripNature", label:"Nature of this trip",               example:"e.g., business offsite, birthday, bachelorette party, school field trip", type:"input"},
+  {id:"location",   label:"Location",                          example:"e.g., Heart's Desire Beach, Drake's Estero, etc.",    type:"input"},
   {id:"staying",    label:"Where are they staying",            example:"e.g., Marconi, Nicks Cove, etc.",                     type:"input"},
-  {id:"specialRequests", label:"Special requests",             example:"e.g., vegetarian snacks, ADA-accessible launch, need a photographer", type:"textarea"},
-  {id:"notes",      label:"Anything else to know",             example:"e.g., first-time paddlers, celebrating a retirement", type:"textarea"},
+  {id:"idealDate",  label:"Ideal date of trip",                example:"e.g., July 13",                                       type:"input"},
+  {id:"timeOfDay",  label:"Time of day / duration",            example:"e.g., morning, 2-hour trip",                          type:"input"},
   {id:"dates",      label:"Dates they're in the area",         example:"e.g., July 12–15",                                    type:"input"},
   {id:"flexibility",label:"Flexibility / alternate dates",     example:"e.g., can shift ±2 days, only available weekends",    type:"input"},
+  {id:"specialRequests", label:"Special requests",             example:"e.g., vegetarian snacks, ADA-accessible launch, need a photographer", type:"textarea"},
+  {id:"notes",      label:"Anything else to know",             example:"e.g., first-time paddlers, celebrating a retirement", type:"textarea"},
 ];
 
 function escapeHtml(s){ return (s||"").toString().replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
@@ -173,27 +174,49 @@ async function onSubmitInquiry(){
 }
 
 /* ---------------- REVIEW / SEND ---------------- */
+const CLIENT_EMAIL_FIELD_ORDER = ["contactName","org","email","phone","activity","privacy","ageRange",
+  "groupSize","budget","tripNature","location","staying","idealDate","timeOfDay","dates","flexibility",
+  "specialRequests","notes"];
+
 function buildClientEmail(inq){
-  const shareFields = ["activity","privacy","ageRange","location","groupSize","tripNature","staying","specialRequests","dates","flexibility"];
-  const lines = shareFields.filter(id=>inq[id]).map(id=>`${fieldLabel(id)}: ${inq[id]}`);
+  const filled = CLIENT_EMAIL_FIELD_ORDER.filter(id => inq[id]);
   const subject = `Thanks for reaching out to Blue Waters Kayaking!`;
-  const body = `Hi ${inq.contactName || "there"},
 
-Thanks for your interest in a group trip with Blue Waters Kayaking! Here's what we have on file so far:
+  const rows = filled.map(id => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #E4EAE7;font-weight:600;color:#237566;white-space:nowrap;vertical-align:top;">${escapeHtml(fieldLabel(id))}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #E4EAE7;color:#1A1A1A;">${escapeHtml(inq[id])}</td>
+    </tr>`).join("");
 
-${lines.length ? lines.join("\n") : "(details to be confirmed)"}
+  const html = `<div style="font-family:Arial, Helvetica, sans-serif; color:#1A1A1A; max-width:560px;">
+    <p>Hi ${escapeHtml(inq.contactName || "there")},</p>
+    <p>Thanks for your interest in a group trip with Blue Waters Kayaking! Here's a summary of what we have on file:</p>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0;" cellpadding="0" cellspacing="0">${rows}</table>
+    <p>Our group sales team will follow up with you shortly to firm up the details.</p>
+    <p>Talk soon,<br>Blue Waters Kayaking</p>
+  </div>`;
+
+  const text = `Hi ${inq.contactName || "there"},
+
+Thanks for your interest in a group trip with Blue Waters Kayaking! Here's a summary of what we have on file:
+
+${filled.map(id => `${fieldLabel(id)}: ${inq[id]}`).join("\n")}
 
 Our group sales team will follow up with you shortly to firm up the details.
 
 Talk soon,
 Blue Waters Kayaking`;
-  return {subject, body};
+
+  return {subject, text, html};
 }
+
+let pendingEmail = null; // {to, cc, subject, text, html} for the currently-reviewed inquiry, or null
 
 function renderReview(inq){
   const wrap = document.getElementById("form-wrap");
   const hasClientEmail = !!inq.email;
   const client = buildClientEmail(inq);
+  pendingEmail = hasClientEmail ? {to: inq.email, cc: KOBEN_EMAIL, subject: client.subject, text: client.text, html: client.html} : null;
 
   let html = `<p class="form-intro">Inquiry saved${hasClientEmail ? " — review the email below, then send." : "."}</p>`;
 
@@ -202,7 +225,7 @@ function renderReview(inq){
       <h3>Client confirmation</h3>
       <div class="to-line">To: ${escapeHtml(inq.email)} — Cc: ${KOBEN_EMAIL}</div>
       <input class="subject" id="client-subject" value="${escapeAttr(client.subject)}" readonly>
-      <textarea class="body" id="client-body" readonly>${escapeHtml(client.body)}</textarea>
+      <div class="email-preview">${client.html}</div>
     </div>`;
     html += `<button class="btn btn-primary" id="send-btn">Send</button>
       <button class="btn btn-secondary" id="edit-btn" style="margin-left:8px;">Edit answers</button>
@@ -220,7 +243,7 @@ function renderReview(inq){
   document.getElementById("edit-btn").addEventListener("click", ()=>renderForm(inq));
   document.getElementById("new-inquiry-btn").addEventListener("click", ()=>renderForm(null));
   if(hasClientEmail){
-    document.getElementById("send-btn").addEventListener("click", ()=>onSend(inq));
+    document.getElementById("send-btn").addEventListener("click", onSend);
   }
 }
 
@@ -230,16 +253,17 @@ function fallbackBox(e){
   return `<div class="fallback-box">Send it yourself instead: <a href="${mailto}" target="_blank">open in your email client</a>.</div>`;
 }
 
-async function onSend(inq){
+async function onSend(){
   const btn = document.getElementById("send-btn");
   const statusEl = document.getElementById("send-status");
+  if(!pendingEmail) return;
   btn.disabled = true;
   statusEl.innerHTML = `<p class="send-status">Sending…</p>`;
 
   const emailsToSend = [
-    {label:"client", to: inq.email, cc: KOBEN_EMAIL,
+    {label:"client", to: pendingEmail.to, cc: pendingEmail.cc,
       subject: document.getElementById("client-subject").value,
-      body: document.getElementById("client-body").value}
+      body: pendingEmail.text, htmlBody: pendingEmail.html}
   ];
 
   try{
