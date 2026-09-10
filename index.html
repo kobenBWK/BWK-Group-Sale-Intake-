@@ -62,6 +62,8 @@ const WEBHOOK_SECRET = "bwk-9f2xk-inquiry-4471";
 
 const KOBEN_EMAIL = "koben@bluewaterskayaking.com";
 const INFO_EMAIL  = "info@bluewaterskayaking.com";
+const OFFICE_PHONE = "(415) 669-2600";
+const LOGO_URL = "https://kobenbwk.github.io/BWK-Group-Sale-Intake-/logo.png";
 
 const FIELDS = [
   {id:"loggedBy",   label:"Logged by",                         example:"",                                                     type:"select", options:["Koben","Elle","Luca","Lori","Pam"]},
@@ -184,17 +186,32 @@ function buildClientEmail(inq){
 
   const rows = filled.map(id => `
     <tr>
-      <td style="padding:8px 12px;border-bottom:1px solid #E4EAE7;font-weight:600;color:#237566;white-space:nowrap;vertical-align:top;">${escapeHtml(fieldLabel(id))}</td>
-      <td style="padding:8px 12px;border-bottom:1px solid #E4EAE7;color:#1A1A1A;">${escapeHtml(inq[id])}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #DDDDDD;font-weight:600;color:#000000;white-space:nowrap;vertical-align:top;">${escapeHtml(fieldLabel(id))}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #DDDDDD;color:#000000;">${escapeHtml(inq[id])}</td>
     </tr>`).join("");
 
-  const html = `<div style="font-family:Arial, Helvetica, sans-serif; color:#1A1A1A; max-width:560px;">
-    <p>Hi ${escapeHtml(inq.contactName || "there")},</p>
-    <p>Thanks for your interest in a group trip with Blue Waters Kayaking! Here's a summary of what we have on file:</p>
-    <table style="border-collapse:collapse;width:100%;margin:16px 0;" cellpadding="0" cellspacing="0">${rows}</table>
-    <p>Our group sales team will follow up with you shortly to firm up the details.</p>
-    <p>Talk soon,<br>Blue Waters Kayaking</p>
-  </div>`;
+  const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#4A7FA5;background-image:repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 2px, transparent 2px, transparent 14px), repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 2px, transparent 2px, transparent 14px); padding:36px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#FFFDF0;max-width:600px;width:100%;">
+          <tr>
+            <td align="center" style="padding:32px 20px 20px;">
+              <img src="${LOGO_URL}" alt="Blue Waters Kayaking" width="320" style="width:320px;max-width:80%;height:auto;display:block;">
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 32px 36px;font-family:Arial, Helvetica, sans-serif;color:#000000;font-size:15px;line-height:1.6;">
+              <p style="color:#000000;margin:0 0 14px;">Hi ${escapeHtml(inq.contactName || "there")},</p>
+              <p style="color:#000000;margin:0 0 16px;">Thanks for your interest in a group trip with Blue Waters Kayaking! Here's a summary of what we have on file:</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 20px;">${rows}</table>
+              <p style="color:#000000;margin:0 0 14px;">Our group sales team will follow up with you shortly to firm up the details.</p>
+              <p style="color:#000000;margin:0;">Talk soon,<br>Blue Waters Kayaking<br>${OFFICE_PHONE}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>`;
 
   const text = `Hi ${inq.contactName || "there"},
 
@@ -205,7 +222,8 @@ ${filled.map(id => `${fieldLabel(id)}: ${inq[id]}`).join("\n")}
 Our group sales team will follow up with you shortly to firm up the details.
 
 Talk soon,
-Blue Waters Kayaking`;
+Blue Waters Kayaking
+${OFFICE_PHONE}`;
 
   return {subject, text, html};
 }
