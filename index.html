@@ -235,7 +235,8 @@ function renderReview(inq){
   const hasClientEmail = !!inq.email;
   const client = buildClientEmail(inq);
   const toAddress = hasClientEmail ? inq.email : KOBEN_EMAIL;
-  pendingEmail = {to: toAddress, cc: KOBEN_EMAIL, subject: client.subject, text: client.text, html: client.html};
+  const ccAddresses = `${KOBEN_EMAIL},${INFO_EMAIL}`;
+  pendingEmail = {to: toAddress, cc: ccAddresses, subject: client.subject, text: client.text, html: client.html};
 
   let html = `<p class="form-intro">Inquiry saved — review the email below, then send.</p>`;
   if(!hasClientEmail){
@@ -244,7 +245,7 @@ function renderReview(inq){
 
   html += `<div class="review-card" id="card-client">
     <h3>${hasClientEmail ? "Client confirmation" : "Inquiry notification"}</h3>
-    <div class="to-line">To: ${escapeHtml(toAddress)}${hasClientEmail ? " — Cc: " + KOBEN_EMAIL : ""}</div>
+    <div class="to-line">To: ${escapeHtml(toAddress)} — Cc: ${ccAddresses}</div>
     <input class="subject" id="client-subject" value="${escapeAttr(client.subject)}" readonly>
     <div class="email-preview">${client.html}</div>
   </div>`;
