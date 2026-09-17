@@ -111,24 +111,24 @@ document.querySelectorAll("#range-toggle button").forEach(b=>{
     renderAll();
   });
 });
-document.getElementById("refresh-btn").addEventListener("click", loadDashboard);
+document.getElementById("refresh-btn").addEventListener("click", ()=>loadDashboard(true));
 document.getElementById("inquiries-table").addEventListener("click", (e)=>{
   const btn = e.target.closest("button[data-action]");
   if(!btn) return;
   toggleManualFollowup(btn.dataset.id, btn.dataset.action === "mark");
 });
 
-async function loadDashboard(){
+async function loadDashboard(forceFresh){
   document.getElementById("last-updated").textContent = "Loading…";
   document.getElementById("dash-error").innerHTML = "";
   try{
-    const resp = await fetch(`${DASHBOARD_URL}?action=dashboard`);
+    const resp = await fetch(`${DASHBOARD_URL}?action=dashboard${forceFresh ? "&fresh=1" : ""}`);
     const data = await resp.json();
     if(data.error) throw new Error(data.error);
     dashCache.inquiries = data.inquiries || [];
     dashCache.outreach = data.outreach || [];
     dashCache.loadedAt = new Date();
-    document.getElementById("last-updated").textContent = "Updated " + dashCache.loadedAt.toLocaleTimeString();
+    document.getElementById("last-updated").textContent = "Updated " + dashCache.loadedAt.toLocaleTimeString() + (forceFresh ? "" : " (may be a few minutes old)");
   }catch(e){
     document.getElementById("dash-error").innerHTML = `<div class="err-note">Couldn't load the dashboard (${escapeHtml(e.message)}). If you're not signed into your bluewaterskayaking.com Google account in this browser, sign in and try again.</div>`;
   }
